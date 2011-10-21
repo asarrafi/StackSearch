@@ -1,0 +1,520 @@
+<!-- 
+ * @file index.html
+ * @author Ali Sarrafi
+ *
+ * Application that provides basic search functionality for
+ * stackoverflow questions.
+ *
+ * The entire UI and most of the application logic is implemented
+ * in JavaScript.
+ -->
+<!DOCTYPE html>
+
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>StackOverflow Search Client</title>
+
+<link type="text/css" rel="stylesheet" media="screen"
+	href="js/jqtouch/jqtouch.css">
+<link type="text/css" rel="stylesheet" media="screen"
+	href="js/themes/artspot/theme.css">
+<link type="text/css" rel="stylesheet" media="screen"
+	href="appStyle.css">
+
+<script src="js/jqtouch/jquery-1.4.2.min.js" type="text/javascript"
+	charset="utf-8"></script>
+<script src="js/jqtouch/jqtouch.js" type="application/x-javascript"
+	charset="utf-8"></script>
+
+<!-- Import the bridge library. -->
+<script src="js/bridge.js" type="text/javascript" charset="utf-8"></script>
+
+<!-- Import file extensions library. -->
+<script src="js/file.js" type="text/javascript" charset="utf-8"></script>
+
+<!-- Inline JavaScript goes here -->
+<script type="text/javascript">
+	// Fire up JQTouch
+	var jQT = $.jQTouch({
+		statusBar : 'black'
+	});
+	var windowWidth = 0;
+	var windowsHeight = 0;
+	var currentPageID = 0
+	//The key used for stackExchangeApps you need to insert your own app key
+	//but the app works without a key 
+	var appKey = "";
+	
+	// We defince the parsed latest search inputs as global functions because
+	// we use them in multiple places.
+	var gParsedSearchItems = "";
+
+	// Make sure we get the correct event type on every touch system.
+	var userAgent = navigator.userAgent.toLowerCase();
+	var isiPhone = (userAgent.indexOf('iphone') != -1 || userAgent
+			.indexOf('ipod') != -1) ? true : false;
+	var clickEvent = isiPhone ? 'tap' : 'click';
+
+	function showAnswersForQuestion(question_id, accepted_answer_id) {
+		var question_ul = document.getElementById("question_ul");
+		var apiQuestionsURL = "http://api.stackoverflow.com/1.1/questions/"
+				+ question_id + "?body=true" + appKey;
+
+		var answers_div = document.getElementById("answers_div");
+
+		$.getJSON(apiQuestionsURL, function(d) {
+			question_ul.innerHTML = "";
+			$.each(d.questions, function(key, value) {
+				question_ul.innerHTML = "<li> Question Title: " + value.title
+						+ "</li>";
+
+				question_ul.innerHTML += "<li style='font-size:70%'>"
+						+ value.body.replace("<img ", "<img width='60%' ")
+						+ "</li>";
+			});
+		});
+		var apiUrl = "http://api.stackoverflow.com/1.1/questions/"
+				+ question_id + "/answers?body=true&order=desc&sort=votes"
+				+ appKey;
+
+		$.getJSON(
+				apiUrl,
+				function(d) {
+					answers_div.innerHTML = "";
+					if (d.answers.length == 0) {
+						answers_div.innerHTML +=  '<ul class="rounded"><li>'
+														+ 'Could not find any answers for this question!!!'
+												+ '</li></ul>';
+						return;
+					}
+
+					$.each(
+							d.answers,
+							function(key, val) {
+								votes_color = (val.up_vote_count == 0) ? "#555"
+										: "#75845C";
+								accteptedURL = (val.accepted == false) ? ""
+										: "<img src=\"img/tick.gif\"  height=\"38\" width=\"" +
+													windowWidth/20 +
+													"\" />";
+								var answerInfoTable = '<div>'
+										
+										+ '<div class="votesBlock" style="background-color: '
+												+ votes_color +
+												'; width:'
+												+ windowWidth/10
+												+ 'px ">'
+										
+										+ '<div><h6>'
+											+ val.up_vote_count
+										+ '</h6></div>'
+										
+										+ '<div style="padding: 2px"><h6>'
+											+ 'V'
+										+ '</h6> </div>'
+										
+										+ '</div>'
+										
+										+ '<div class="reputationBlock" style="width:' + windowWidth/10 + 'px ">'
+										
+										+ '<div><h6>'
+										+ val.owner.reputation
+										+ '</h6></div>'
+										
+										+ '<div style="padding: 2px"><h6>Rep</h6> </div>'
+										+ '</div>'
+										
+										+ '<div  class="acceptedAnswer" style=" width:' + windowWidth/8 + 'px  ">'
+										+ '<div>'
+										+ accteptedURL
+										+ '</div>'
+										
+										+ '</div>'
+										
+										+ '<div class="answerBody"><h5>'
+										+ val.owner.display_name
+										+ '</h5></div>'
+										
+										+ '</div>';
+										
+										
+								data = val.body.replace("<img ", "<img width='60%' ");
+								
+								answers_div.innerHTML += '<ul>'
+										+ '<li>'
+										+ answerInfoTable
+										+ '</li>'
+										+ '<li style="font-size:70%;">'
+										+ data.replace("<a ", "<a target='_blank' ")
+										+ '</li>' + '</ul>';
+							});
+		});
+		currentPageID++;
+		jQT.goTo('#answers');
+
+	}
+
+	/**
+	 * Outputs the received search Results to the user-interface
+	 * @param searchResults The results as an object. 
+	 */
+	function showResults(searchResults) {
+		var results_ul = document.getElementById("results_ul");
+		// If it is the loading indicator do not parse it.
+		if (searchResults == "loading...") {
+			results_ul.innerHTML = "<li>" + searchResults + "</li>";
+		} else {
+			var results = "";
+			if (searchResults.total == '0') {
+				results = "<li>Nothing found on the server!</li>";
+			} else {
+
+				$.each(
+						searchResults.questions,
+						function(key, val) {
+							vote_count = (val.up_vote_count == undefined) ? 0
+									: val.up_vote_count;
+							answer_count = (val.answer_count == undefined) ? 0
+									: val.answer_count;
+							answers_color = (answer_count == 0) ? "#9A4444"
+									: "#75845C";
+							results += '<li><div style="padding: 2px">'
+									+ '<div  class="reputationBlock" style="width:' + windowWidth/10 + 'px ">'
+									
+									+ '<div ><h6>'
+										+ vote_count
+									+ '</h6></div>'
+									
+									+ '<div style="padding: 2px "><h6>V</h6></div>'
+									
+									+ '</div>'
+									
+									+ '<div class="votesBlock" style="background-color:'
+										+ answers_color
+										+ '; width:'
+										+ windowWidth/10
+									+ 'px">'
+									
+									+ '<div><h6>'
+										+ answer_count
+									+ '</h6></div>'
+									
+									+ '<div style="padding: 2px"><h6>A</h6></div>'
+									
+									+ '</div>'
+									
+									+ '<div class="questionList"><p><h6><a id="'
+										+ val.question_id
+										+ '" onclick="showAnswersForQuestion(\''
+										+ val.question_id + '\', \' '
+										+ val.accepted_answer_id + ' \')">'
+										+ val.title + '</a>'
+									+ '</h6></p></div></div>'
+									+ '</li>';
+						});
+			}
+			results_ul.innerHTML = results;
+		}
+	}
+
+	/**
+	 * Navigates back one page.
+	 */
+	function goBack() {
+		currentPageID--;
+		jQT.goBack();
+	}
+
+	/**
+	 * Downloads the Tweets for an specific user.
+	 * @param username the username that should be used
+	 * for downloading.
+	 */
+	function searchFromURL(apiUrl) {
+		showResults("loading...");
+
+		// Do the ajax call with JSON.
+		$.getJSON(apiUrl, function(d) {
+			showResults(d);
+		});
+		currentPageID++;
+		jQT.goTo('#searchResults');
+	}
+
+	function handleBackKey()
+	{
+		if(currentPageID <= 0)
+		{
+			bridge.messagehandler.send({ "messageName": "close" }, null);
+			return;
+		}
+		goBack();
+	}
+	/**
+	 * Gets the tweets for the user indicated in the input form.
+	 */
+	function basicSearch() {
+		// Get the search text from the input field.
+		var searchText = document.getElementById("searchInput").value;
+		var apiUrl = "http://api.stackoverflow.com/1.1/search?intitle="
+				+ searchText + "&sort=views" + appKey;
+		addSearchTerm();
+		searchFromURL(apiUrl);
+	}
+
+	function advancedSearch() {
+		// Get the data from the input fields.
+		var intitle = document.getElementById("intitleInput").value;
+		var tagList = document.getElementById("tagsInput").value;
+		var sortBy = document.getElementById("sortBy").value;
+		if ((intitle.length == 0) && (tagList.length) == 0) {
+			alert("At least one of the title or tag fields should containt text.");
+			jQT.goTo('#advancedSearch');
+			return
+
+		}
+		intitleURL = (intitle.length == 0) ? "" : "intitle=" + intitle + "&";
+
+		tagListURL = (tagList.length == 0) ? "" : "tagged=" + tagList + "&";
+		sortBy = "sort=" + sortBy;
+		var apiUrl = "http://api.stackoverflow.com/1.1/search?" + tagListURL
+				+ intitleURL + sortBy + appKey;
+		searchFromURL(apiUrl);
+	}
+	/**
+	 * Read the list of latest searches, then
+	 * call the supplied callback function
+	 * with two parameters, the user data
+	 * and the path to the data file.
+	 */
+	function readSavedSearchTerms(callbackFun) {
+		// Path to file that included the app data.
+		var filePath;
+
+		bridge.file.getLocalPath(read);
+
+		function read(path) {
+			if (null == path) {
+				return;
+			}
+
+			filePath = path + "SavedSearches";
+			bridge.file.read(filePath, handleResult);
+		}
+
+		function handleResult(data) {
+			callbackFun(data, filePath);
+		}
+	}
+
+	/**
+	 * Read and display list of favourite users.
+	 */
+	function readAndDisplayLatestSearchTerms() {
+		readSavedSearchTerms(displaySearchTerms);
+	}
+
+	/**
+	 * This function uses calls to Mosync for accessing files
+	 * and saving favorite users.
+	 */
+	function addSearchTerm() {
+		// Get the username from the input field
+		var searchInput = document.getElementById("searchInput").value;
+
+		var itemList;
+
+		function addItem(itemData, filePath) {
+			itemList = itemData;
+			if (null == itemList) {
+				itemList = "";
+			}
+
+			// Create a unique string, "!"
+			var separatedSearchItem = "!" + searchInput + "!";
+
+			// Add user only if not in string.
+			if (-1 == itemList.indexOf(separatedSearchItem)) {
+				itemList += separatedSearchItem;
+			}
+
+			// Write user list.
+			bridge.file.write(filePath, itemList, reportResult);
+		}
+
+		function reportResult(success) {
+			if (success) {
+				displaySearchTerms(itemList);
+				
+			} else {
+				alert("could not save search item");
+			}
+		}
+		readSavedSearchTerms(addItem);
+	}
+
+	function displaySearchTerms(itemData) {
+		if (null == itemData) {
+			return;
+		}
+
+		gParsedSearchTerms = parseSearchTerms(itemData);
+
+		var favorites_ul = document.getElementById("favorites");
+		var myID = "";
+		favorites_ul.innerHTML = "<li> Recent Searches: </li>";
+		for ( var i = 0; i < gParsedSearchTerms.length; i++) {
+			var apiUrl = "http://api.stackoverflow.com/1.1/search?intitle="
+					+ gParsedSearchTerms[i] + "&sort=views" + appKey;
+			myID = "#submitButton" + i;
+			favorites_ul.innerHTML += "<li class='arrow'><a id='submitButton"
+					+ i + "')' onclick='searchFromURL(\"" + apiUrl + "\")'>"
+					+ gParsedSearchTerms[i] + "</a></li>";
+		}
+	}
+
+	/**
+	 * Parse a string with a list of user names.
+	 */
+	function parseSearchTerms(itemData) {
+		// Split string into elements, remove empty strings.
+		return itemData.split("!").filter(function(x) {
+			return x.length > 0
+		});
+	}
+
+	/**
+	 * Event-listener. Gets called if the user presses a button
+	 * on his keyboard in the input field.
+	 * @param keynum The pressed key (as an ASCii value)
+	 */
+	function keydown(keynum) {
+		if (keynum == 13) {
+			$("#submitButton").trigger(clickEvent);
+		}
+	}
+
+	/**
+	 * Will be called after all the markup in <body> was loaded
+	 */
+	function initialize() {
+		$("#submitButton").bind(clickEvent, function(e) {
+			basicSearch();
+		});
+		$("#backButton").bind(clickEvent, function(e) {
+			goBack();
+		});
+		$("#backButton2").bind(clickEvent, function(e) {
+			goBack();
+		});
+		$("#advancedButton").bind(clickEvent, function(e) {
+			jQT.goTo('#advancedSearch');
+		});
+		$("#advancedSubmitButton").bind(clickEvent, function(e) {
+			advancedSearch();
+		});
+
+		windowWidth = $(document).width();
+		windowHeight = $(document).height();
+		readAndDisplayLatestSearchTerms();
+	}
+</script>
+
+<!-- CSS styles -->
+<style type="text/css">
+</style>
+</head>
+
+<!-- A simple JQTouch layout consisting of two views -->
+<body onload="initialize()">
+	<div id="jqt">
+		<!-- "Page 1" -->
+		<div id="theform">
+			<div class="toolbar">
+				<h1>StackSearch</h1>
+			</div>
+
+			<ul class="rounded">
+				<li align="center"><img src="img/stackoverflow-logo.png"
+					align="center" height="40" /></li>
+				<li><input onkeydown="keydown(event.which);" type="search"
+					placeholder="Enter text to search in stackoverflow" name="search"
+					id="searchInput" autocapitalize="off" autocorrect="off"
+					autocomplete="off"></li>
+
+				<li><a id="submitButton">Basic Search</a>
+				</li>
+				<li><a id="advancedButton">Advanced Search</a>
+				</li>
+			</ul>
+
+			<ul id="favorites" class="rounded">
+				<li>Recent Searches:</li>
+			</ul>
+
+		</div>
+
+		<!-- "Page 2" - Will contain the questions found -->
+		<div id="searchResults">
+			<div class="toolbar">
+				<h1 id="searchTitle">Search Results</h1>
+				<a class="button back" id="backButton">Back</a>
+			</div>
+
+			<ul id="results_ul" class="rounded">
+				<li>Loading...</li>
+			</ul>
+		</div>
+
+		<!-- "Page 2" - Will contain the questions found -->
+		<div id="advancedSearch">
+			<div class="toolbar">
+				<h1 id="advancedSearchTitle">Advanced Search</h1>
+				<a class="button back" href="#theform" id="backButton">Back</a>
+			</div>
+			<ul class="rounded">
+				<li><input type="search" placeholder="Title Search"
+					name="intitle" id="intitleInput" autocapitalize="off"
+					autocorrect="off" autocomplete="off"></li>
+				<li><input type="search"
+					placeholder="Tags, seperated by semicolons" name="tags"
+					id="tagsInput" autocapitalize="off" autocorrect="off"
+					autocomplete="on"></li>
+				<li>Sort By:</li>
+				<li style="text-align: center"><select id="sortBy">
+						<optgroup label="Sort Options:">
+							<option style="text-align: center" value="activity">
+								Activity</option>
+							<option style="text-align: center" value="creation">
+								Creation</option>
+							<option style="text-align: center" value="views">Views</option>
+							<option style="text-align: center" value="votes">Votes</option>
+						</optgroup>
+				</select></li>
+				<li style="text-align: center"><a id="advancedSubmitButton">Search</a>
+				</li>
+			</ul>
+		</div>
+
+
+		<!-- "Page 3" - Will contain the answers for the question  -->
+		<div id="answers">
+			<div class="toolbar">
+				<h1 id="answershTitle">Answers</h1>
+				<a class="button back" id="backButton2">Back</a>
+			</div>
+
+
+			<ul id="question_ul" class="rounded">
+				<li>Loading...</li>
+			</ul>
+			<div id="answers_div">
+				<ul id="answers_ul" class="rounded">
+					<li>Loading...</li>
+				</ul>
+			</div>
+		</div>
+	</div>
+</body>
+</html>

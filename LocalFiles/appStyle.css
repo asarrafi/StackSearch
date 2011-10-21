@@ -1,0 +1,53 @@
+.votesBlock {
+	border: solid;
+	border-size: 1px;
+	text-align: center;
+	color: white;
+	display: block;
+	float: left;
+	padding: 5px;
+}
+
+.reputationBlock {
+	border: solid;
+	border-size: 1px;
+	font-size: 100%;
+	background-color: white;
+	text-align: center;
+	color: #555;
+	display: block;
+	float: left;
+	padding: 5px;
+}
+
+.acceptedAnswer {
+	font-size: 100%;
+	background-color: white;
+	text-align: center;
+	color: #555;
+	display: block;
+	float: left;
+	padding: 5px;
+}
+
+.answerBody {
+	font-size: 100%;
+	background-color: white;
+	text-align: left;
+	color: black;
+	display: block;
+	border-color: black;
+	float: left;
+	padding: 5px;
+	word-wrap: break-word;
+}
+
+.questionList {
+	background-color: white;
+	text-align: left;
+	color: black;
+	float: left;
+	word-wrap: break-word;
+	width: 60%;
+	padding: 5px;
+}
